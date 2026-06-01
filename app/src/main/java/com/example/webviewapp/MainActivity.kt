@@ -20,8 +20,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,12 +51,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WebviewAppTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    LockedWebView(
-                        initialUrl = "https://go.nepton.com",
-                        modifier = Modifier.padding(innerPadding),
-                    )
-                }
+                LockedWebView(initialUrl = "https://go.nepton.com")
             }
         }
     }
@@ -51,11 +59,13 @@ class MainActivity : ComponentActivity() {
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
-fun LockedWebView(initialUrl: String, modifier: Modifier = Modifier) {
+fun LockedWebView(initialUrl: String) {
     var webView by remember { mutableStateOf<WebView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
+    var canGoForward by remember { mutableStateOf(false) }
     var filePathCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
     var progress by remember { mutableIntStateOf(0) }
+    var showAllowedSites by remember { mutableStateOf(false) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -71,7 +81,6 @@ fun LockedWebView(initialUrl: String, modifier: Modifier = Modifier) {
         "microsoft.com",
         "login.microsoftonline.com",
         "login.live.com",
-        "okta.com"
     )
 
     fun isDomainAllowed(url: String?): Boolean {
@@ -85,78 +94,136 @@ fun LockedWebView(initialUrl: String, modifier: Modifier = Modifier) {
         webView?.goBack()
     }
 
-    Box(modifier = modifier) {
-        AndroidView(
-            factory = { context ->
-                WebView(context).apply {
-                    settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
-                    settings.allowFileAccess = true
+    Scaffold(
+        modifier = Modifier.fillMaxSize(),
+        bottomBar = {
+            BottomAppBar {
+                IconButton(
+                    onClick = { webView?.goBack() },
+                    enabled = canGoBack
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                }
+                IconButton(
+                    onClick = { webView?.goForward() },
+                    enabled = canGoForward
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
+                }
+                IconButton(
+                    onClick = { webView?.reload() }
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                }
+                IconButton(
+                    onClick = { showAllowedSites = true }
+                ) {
+                    Icon(Icons.Default.Star, contentDescription = "Allowed Sites")
+                }
+            }
+        }
+    ) { innerPadding ->
+        Box(modifier = Modifier.padding(innerPadding)) {
+            AndroidView(
+                factory = { context ->
+                    WebView(context).apply {
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.allowFileAccess = true
 
-                    webViewClient = object : WebViewClient() {
-                        override fun shouldOverrideUrlLoading(
-                            view: WebView?,
-                            request: WebResourceRequest?
-                        ): Boolean {
-                            val url = request?.url?.toString()
-                            return !isDomainAllowed(url)
+                        webViewClient = object : WebViewClient() {
+                            override fun shouldOverrideUrlLoading(
+                                view: WebView?,
+                                request: WebResourceRequest?
+                            ): Boolean {
+                                val url = request?.url?.toString()
+                                return !isDomainAllowed(url)
+                            }
+
+                            override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                                super.onPageStarted(view, url, favicon)
+                                progress = 0
+                            }
+
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                super.onPageFinished(view, url)
+                                canGoBack = view?.canGoBack() ?: false
+                                canGoForward = view?.canGoForward() ?: false
+                            }
+
+                            override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                                super.doUpdateVisitedHistory(view, url, isReload)
+                                canGoBack = view?.canGoBack() ?: false
+                                canGoForward = view?.canGoForward() ?: false
+                            }
+
+                            override fun onRenderProcessGone(
+                                view: WebView?,
+                                detail: RenderProcessGoneDetail?
+                            ): Boolean {
+                                return true
+                            }
                         }
 
-                        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
-                            super.onPageStarted(view, url, favicon)
-                            progress = 0
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                progress = newProgress
+                            }
+
+                            override fun onShowFileChooser(
+                                webView: WebView?,
+                                callback: ValueCallback<Array<Uri>>?,
+                                params: FileChooserParams?
+                            ): Boolean {
+                                filePathCallback?.onReceiveValue(null)
+                                filePathCallback = callback
+                                filePickerLauncher.launch("*/*")
+                                return true
+                            }
                         }
 
-                        override fun onPageFinished(view: WebView?, url: String?) {
-                            super.onPageFinished(view, url)
-                            canGoBack = view?.canGoBack() ?: false
-                        }
+                        loadUrl(initialUrl)
+                    }
+                },
+                modifier = Modifier.fillMaxSize(),
+                update = {
+                    webView = it
+                }
+            )
 
-                        override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
-                            super.doUpdateVisitedHistory(view, url, isReload)
-                            canGoBack = view?.canGoBack() ?: false
-                        }
+            if (progress < 100) {
+                LinearProgressIndicator(
+                    progress = { progress / 100f },
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+    }
 
-                        override fun onRenderProcessGone(
-                            view: WebView?,
-                            detail: RenderProcessGoneDetail?
-                        ): Boolean {
-                            // Prevent the app from being killed if the renderer process crashes
-                            return true
+    if (showAllowedSites) {
+        AlertDialog(
+            onDismissRequest = { showAllowedSites = false },
+            title = { Text("Allowed Sites") },
+            text = {
+                LazyColumn {
+                    items(allowedDomains) { domain ->
+                        TextButton(
+                            onClick = {
+                                webView?.loadUrl("https://$domain")
+                                showAllowedSites = false
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(domain)
                         }
                     }
-
-                    webChromeClient = object : WebChromeClient() {
-                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
-                            progress = newProgress
-                        }
-
-                        override fun onShowFileChooser(
-                            webView: WebView?,
-                            callback: ValueCallback<Array<Uri>>?,
-                            params: FileChooserParams?
-                        ): Boolean {
-                            filePathCallback?.onReceiveValue(null)
-                            filePathCallback = callback
-                            filePickerLauncher.launch("*/*")
-                            return true
-                        }
-                    }
-
-                    loadUrl(initialUrl)
                 }
             },
-            modifier = Modifier.fillMaxSize(),
-            update = {
-                webView = it
+            confirmButton = {
+                TextButton(onClick = { showAllowedSites = false }) {
+                    Text("Close")
+                }
             }
         )
-
-        if (progress < 100) {
-            LinearProgressIndicator(
-                progress = { progress / 100f },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
     }
 }
