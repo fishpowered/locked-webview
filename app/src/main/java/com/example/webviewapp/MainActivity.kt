@@ -1,6 +1,7 @@
 package com.example.webviewapp
 
 import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
 import android.webkit.RenderProcessGoneDetail
@@ -15,11 +16,15 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -50,6 +55,7 @@ fun LockedWebView(initialUrl: String, modifier: Modifier = Modifier) {
     var webView by remember { mutableStateOf<WebView?>(null) }
     var canGoBack by remember { mutableStateOf(false) }
     var filePathCallback by remember { mutableStateOf<ValueCallback<Array<Uri>>?>(null) }
+    var progress by remember { mutableIntStateOf(0) }
 
     val filePickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
@@ -59,6 +65,7 @@ fun LockedWebView(initialUrl: String, modifier: Modifier = Modifier) {
     }
 
     val allowedDomains = listOf(
+        "nepton.com",
         "google.com",
         "accounts.google.com",
         "microsoft.com",
@@ -78,61 +85,78 @@ fun LockedWebView(initialUrl: String, modifier: Modifier = Modifier) {
         webView?.goBack()
     }
 
-    AndroidView(
-        factory = { context ->
-            WebView(context).apply {
-                settings.javaScriptEnabled = true
-                settings.domStorageEnabled = true
-                settings.allowFileAccess = true
+    Box(modifier = modifier) {
+        AndroidView(
+            factory = { context ->
+                WebView(context).apply {
+                    settings.javaScriptEnabled = true
+                    settings.domStorageEnabled = true
+                    settings.allowFileAccess = true
 
-                webViewClient = object : WebViewClient() {
-                    override fun shouldOverrideUrlLoading(
-                        view: WebView?,
-                        request: WebResourceRequest?
-                    ): Boolean {
-                        val url = request?.url?.toString()
-                        return !isDomainAllowed(url)
+                    webViewClient = object : WebViewClient() {
+                        override fun shouldOverrideUrlLoading(
+                            view: WebView?,
+                            request: WebResourceRequest?
+                        ): Boolean {
+                            val url = request?.url?.toString()
+                            return !isDomainAllowed(url)
+                        }
+
+                        override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
+                            super.onPageStarted(view, url, favicon)
+                            progress = 0
+                        }
+
+                        override fun onPageFinished(view: WebView?, url: String?) {
+                            super.onPageFinished(view, url)
+                            canGoBack = view?.canGoBack() ?: false
+                        }
+
+                        override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
+                            super.doUpdateVisitedHistory(view, url, isReload)
+                            canGoBack = view?.canGoBack() ?: false
+                        }
+
+                        override fun onRenderProcessGone(
+                            view: WebView?,
+                            detail: RenderProcessGoneDetail?
+                        ): Boolean {
+                            // Prevent the app from being killed if the renderer process crashes
+                            return true
+                        }
                     }
 
-                    override fun onPageFinished(view: WebView?, url: String?) {
-                        super.onPageFinished(view, url)
-                        canGoBack = view?.canGoBack() ?: false
+                    webChromeClient = object : WebChromeClient() {
+                        override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                            progress = newProgress
+                        }
+
+                        override fun onShowFileChooser(
+                            webView: WebView?,
+                            callback: ValueCallback<Array<Uri>>?,
+                            params: FileChooserParams?
+                        ): Boolean {
+                            filePathCallback?.onReceiveValue(null)
+                            filePathCallback = callback
+                            filePickerLauncher.launch("*/*")
+                            return true
+                        }
                     }
 
-                    override fun doUpdateVisitedHistory(view: WebView?, url: String?, isReload: Boolean) {
-                        super.doUpdateVisitedHistory(view, url, isReload)
-                        canGoBack = view?.canGoBack() ?: false
-                    }
-
-                    override fun onRenderProcessGone(
-                        view: WebView?,
-                        detail: RenderProcessGoneDetail?
-                    ): Boolean {
-                        // Prevent the app from being killed if the renderer process crashes
-                        // Logs show OOM/Renderer crashes in the emulator
-                        return true
-                    }
+                    loadUrl(initialUrl)
                 }
-
-                webChromeClient = object : WebChromeClient() {
-                    override fun onShowFileChooser(
-                        webView: WebView?,
-                        callback: ValueCallback<Array<Uri>>?,
-                        params: FileChooserParams?
-                    ): Boolean {
-                        filePathCallback?.onReceiveValue(null)
-                        filePathCallback = callback
-                        filePickerLauncher.launch("*/*")
-                        return true
-                    }
-                }
-
-                loadUrl(initialUrl)
+            },
+            modifier = Modifier.fillMaxSize(),
+            update = {
+                webView = it
             }
-        },
-        modifier = modifier.fillMaxSize(),
-        update = {
-            webView = it
+        )
+
+        if (progress < 100) {
+            LinearProgressIndicator(
+                progress = { progress / 100f },
+                modifier = Modifier.fillMaxWidth()
+            )
         }
-    )
+    }
 }
