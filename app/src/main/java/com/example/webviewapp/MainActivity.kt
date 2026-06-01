@@ -77,13 +77,10 @@ fun LockedWebView(initialUrl: String) {
     }
 
     val allowedDomains = listOf(
-        "nepton.com",
-        "google.com",
+        "example.com",
         "accounts.google.com",
-        "microsoft.com",
         "login.microsoftonline.com",
         "login.live.com",
-        "okta.com"
     )
 
     fun isDomainAllowed(url: String?): Boolean {
