@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "net.fishpowered.learningwebviewapp"
+    namespace = "com.example.webviewapp"
     compileSdk = 35
 
     defaultConfig {
