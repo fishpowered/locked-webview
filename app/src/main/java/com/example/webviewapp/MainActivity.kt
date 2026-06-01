@@ -16,7 +16,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -81,6 +83,7 @@ fun LockedWebView(initialUrl: String) {
         "microsoft.com",
         "login.microsoftonline.com",
         "login.live.com",
+        "okta.com"
     )
 
     fun isDomainAllowed(url: String?): Boolean {
@@ -98,27 +101,32 @@ fun LockedWebView(initialUrl: String) {
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             BottomAppBar {
-                IconButton(
-                    onClick = { webView?.goBack() },
-                    enabled = canGoBack
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.Center
                 ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
-                }
-                IconButton(
-                    onClick = { webView?.goForward() },
-                    enabled = canGoForward
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
-                }
-                IconButton(
-                    onClick = { webView?.reload() }
-                ) {
-                    Icon(Icons.Default.Refresh, contentDescription = "Refresh")
-                }
-                IconButton(
-                    onClick = { showAllowedSites = true }
-                ) {
-                    Icon(Icons.Default.Star, contentDescription = "Allowed Sites")
+                    IconButton(
+                        onClick = { webView?.goBack() },
+                        enabled = canGoBack
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                    IconButton(
+                        onClick = { webView?.goForward() },
+                        enabled = canGoForward
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Forward")
+                    }
+                    IconButton(
+                        onClick = { webView?.reload() }
+                    ) {
+                        Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+                    }
+                    IconButton(
+                        onClick = { showAllowedSites = true }
+                    ) {
+                        Icon(Icons.Default.Star, contentDescription = "Allowed Sites")
+                    }
                 }
             }
         }
