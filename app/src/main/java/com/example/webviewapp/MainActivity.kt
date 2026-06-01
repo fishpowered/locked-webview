@@ -53,7 +53,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             WebviewAppTheme {
-                LockedWebView(initialUrl = "https://go.nepton.com")
+                LockedWebView(initialUrl = "go.nepton.com")
             }
         }
     }
