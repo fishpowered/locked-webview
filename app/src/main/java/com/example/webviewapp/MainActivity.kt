@@ -85,9 +85,33 @@ fun LockedWebView(initialUrl: String) {
 
     fun isDomainAllowed(url: String?): Boolean {
         if (url == null) return false
+
         val uri = Uri.parse(url)
-        val host = uri.host ?: return false
-        return allowedDomains.any { host == it || host.endsWith(".$it") }
+
+        val host = uri.host?.removePrefix("www.") ?: return false
+        val path = uri.path ?: ""
+
+        return allowedDomains.any { rule ->
+            val normalizedRule = rule.removePrefix("https://")
+                .removePrefix("http://")
+                .removePrefix("www.")
+
+            val parts = normalizedRule.split("/", limit = 2)
+
+            val ruleHost = parts[0]
+            val rulePath = if (parts.size > 1) "/${parts[1]}" else null
+
+            // host must match (or subdomain match if you want it)
+            val hostMatches = host == ruleHost || host.endsWith(".$ruleHost")
+
+            if (!hostMatches) return@any false
+
+            // no path rule → allow whole domain
+            if (rulePath == null) return@any true
+
+            // path must match prefix
+            path.startsWith(rulePath)
+        }
     }
 
     BackHandler(enabled = canGoBack) {
