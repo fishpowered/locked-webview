@@ -4,10 +4,12 @@ import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.net.Uri
 import android.os.Bundle
+import android.webkit.CookieManager
 import android.webkit.RenderProcessGoneDetail
 import android.webkit.ValueCallback
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.ComponentActivity
@@ -156,10 +158,22 @@ fun LockedWebView(initialUrl: String) {
             AndroidView(
                 factory = { context ->
                     WebView(context).apply {
+                        val cookieManager = CookieManager.getInstance()
+                        cookieManager.setAcceptCookie(true)
+                        // cookieManager.setAcceptThirdPartyCookies(webView, true)
+
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
                         settings.allowFileAccess = true
+                        settings.displayZoomControls = true
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        settings.cacheMode = WebSettings.LOAD_DEFAULT
+                        settings.userAgentString = WebSettings.getDefaultUserAgent(context)
+                        // settings.allowContentAccess = true
+                        // settings.allowFileAccessFromFileURLs = true
+                        // settings.allowUniversalAccessFromFileURLs = true
 
+                        // settings.isAlgorithmicDarkeningAllowed todo test
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(
                                 view: WebView?,
