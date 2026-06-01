@@ -166,6 +166,8 @@ fun LockedWebView(initialUrl: String) {
                         settings.domStorageEnabled = true
                         settings.allowFileAccess = true
                         settings.displayZoomControls = true
+                        settings.setSupportZoom(true)
+                        settings.builtInZoomControls = true
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         settings.cacheMode = WebSettings.LOAD_DEFAULT
                         settings.userAgentString = WebSettings.getDefaultUserAgent(context)
