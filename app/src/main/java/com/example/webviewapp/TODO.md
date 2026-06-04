@@ -1,6 +1,6 @@
-- Double name issue
-- Fix home page not loading
-- Set home page
-- Left align nav menu
-- specific youtube channels safelisted would be cool
-- homepage feed?
+- [x] show a toast when a page is blocked and copy it's url
+- [x] Fix home page not loading
+- [x] Set home page
+- [ ] Left align text inside browser nav menu
+- [ ] specific youtube channels safelisted would be cool
+- [ ] homepage feed?
