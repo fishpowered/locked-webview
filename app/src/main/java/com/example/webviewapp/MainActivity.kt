@@ -78,11 +78,17 @@ fun LockedWebView(initialUrl: String) {
         filePathCallback = null
     }
 
-    val allowedDomains = listOf(
-        "example.com",
+    val allowedSites = listOf(
+        // COMMON...
         "accounts.google.com",
         "login.microsoftonline.com",
         "login.live.com",
+        // ENTERTAINMENT...
+        "netflix.com",
+        "amazon.com",
+        // LEARNING...
+        "wikipedia.org",
+        "bbc.com",
     )
 
     fun isDomainAllowed(url: String?): Boolean {
@@ -93,7 +99,7 @@ fun LockedWebView(initialUrl: String) {
         val host = uri.host?.removePrefix("www.") ?: return false
         val path = uri.path ?: ""
 
-        return allowedDomains.any { rule ->
+        return allowedSites.any { rule ->
             val normalizedRule = rule.removePrefix("https://")
                 .removePrefix("http://")
                 .removePrefix("www.")
@@ -251,7 +257,7 @@ fun LockedWebView(initialUrl: String) {
             title = { Text("Allowed Sites") },
             text = {
                 LazyColumn {
-                    items(allowedDomains) { domain ->
+                    items(allowedSites) { domain ->
                         TextButton(
                             onClick = {
                                 webView?.loadUrl("https://$domain")

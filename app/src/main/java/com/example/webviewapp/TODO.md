@@ -1,0 +1,6 @@
+- Double name issue
+- Fix home page not loading
+- Set home page
+- Left align nav menu
+- specific youtube channels safelisted would be cool
+- homepage feed?
