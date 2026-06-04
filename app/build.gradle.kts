@@ -8,13 +8,27 @@ android {
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "net.fishpowered.learningwebviewapp"
+        applicationId = "net.fishpowered.webviewapp"
         minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    flavorDimensions += "type"
+    productFlavors {
+        create("learningWebview") {
+            dimension = "type"
+            applicationId = "net.fishpowered.learningwebviewapp"
+            resValue("string", "app_name", "Learning")
+        }
+        create("entertainmentWebview") {
+            dimension = "type"
+            applicationId = "net.fishpowered.entertainmentwebviewapp"
+            resValue("string", "app_name", "Entertainment")
+        }
     }
 
     buildTypes {
@@ -32,6 +46,8 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
+        resValues = true
     }
 }
 

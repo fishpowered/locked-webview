@@ -53,9 +53,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // Determine initial URL based on flavor
+        val initialUrl = if (BuildConfig.FLAVOR == "learningWebview") {
+            "https://wikipedia.org"
+        } else {
+            "https://amazon.com"
+        }
+
         setContent {
             WebviewAppTheme {
-                LockedWebView(initialUrl = "go.nepton.com")
+                LockedWebView(initialUrl = initialUrl)
             }
         }
     }
@@ -78,24 +86,36 @@ fun LockedWebView(initialUrl: String) {
         filePathCallback = null
     }
 
-    val allowedSites = listOf(
-        // COMMON...
+    // Split URL lists
+    val commonSites = listOf(
         "accounts.google.com",
         "login.microsoftonline.com",
         "login.live.com",
-        // ENTERTAINMENT...
+    )
+
+    val entertainmentSites = listOf(
         "netflix.com",
         "amazon.com",
-        // LEARNING...
+    )
+
+    val learningSites = listOf(
         "wikipedia.org",
         "bbc.com",
     )
+
+    // Load correct list based on flavor
+    val allowedSites = remember {
+        commonSites + if (BuildConfig.FLAVOR == "learningWebview") {
+            learningSites
+        } else {
+            entertainmentSites
+        }
+    }
 
     fun isDomainAllowed(url: String?): Boolean {
         if (url == null) return false
 
         val uri = Uri.parse(url)
-
         val host = uri.host?.removePrefix("www.") ?: return false
         val path = uri.path ?: ""
 
@@ -105,19 +125,12 @@ fun LockedWebView(initialUrl: String) {
                 .removePrefix("www.")
 
             val parts = normalizedRule.split("/", limit = 2)
-
             val ruleHost = parts[0]
             val rulePath = if (parts.size > 1) "/${parts[1]}" else null
 
-            // host must match (or subdomain match if you want it)
             val hostMatches = host == ruleHost || host.endsWith(".$ruleHost")
-
             if (!hostMatches) return@any false
-
-            // no path rule → allow whole domain
             if (rulePath == null) return@any true
-
-            // path must match prefix
             path.startsWith(rulePath)
         }
     }
@@ -164,9 +177,7 @@ fun LockedWebView(initialUrl: String) {
             AndroidView(
                 factory = { context ->
                     WebView(context).apply {
-                        val cookieManager = CookieManager.getInstance()
-                        cookieManager.setAcceptCookie(true)
-                        // cookieManager.setAcceptThirdPartyCookies(webView, true)
+                        CookieManager.getInstance().setAcceptCookie(true)
 
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
@@ -177,18 +188,13 @@ fun LockedWebView(initialUrl: String) {
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         settings.cacheMode = WebSettings.LOAD_DEFAULT
                         settings.userAgentString = WebSettings.getDefaultUserAgent(context)
-                        // settings.allowContentAccess = true
-                        // settings.allowFileAccessFromFileURLs = true
-                        // settings.allowUniversalAccessFromFileURLs = true
 
-                        // settings.isAlgorithmicDarkeningAllowed todo test
                         webViewClient = object : WebViewClient() {
                             override fun shouldOverrideUrlLoading(
                                 view: WebView?,
                                 request: WebResourceRequest?
                             ): Boolean {
-                                val url = request?.url?.toString()
-                                return !isDomainAllowed(url)
+                                return !isDomainAllowed(request?.url?.toString())
                             }
 
                             override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
@@ -211,9 +217,7 @@ fun LockedWebView(initialUrl: String) {
                             override fun onRenderProcessGone(
                                 view: WebView?,
                                 detail: RenderProcessGoneDetail?
-                            ): Boolean {
-                                return true
-                            }
+                            ): Boolean = true
                         }
 
                         webChromeClient = object : WebChromeClient() {
